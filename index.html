@@ -163,7 +163,7 @@ const DEFAULT_PATTERNS = [
   { id: 'da-white-abs', name: 'DA WHITE ABS', L: 94.73, a: -1.87, b: 0.10 }
 ];
 let patterns = JSON.parse(localStorage.getItem('patterns') || 'null') ?? DEFAULT_PATTERNS;
-let currentId = localStorage.getItem('currentId') || null;
+let currentId = null;               // na starcie nic nie jest wybrane
 let addMode = false;
 
 // ---------- kierunek odchylenia ----------
@@ -206,13 +206,11 @@ function save() {
 
 function renderPatterns() {
   if (!patterns.length) addMode = true;
-  if (!addMode && !current()) currentId = patterns[0]?.id || null;
 
   $('pat').innerHTML =
+    `<option value="">Dodaj / wybierz wzór</option>` +
     `<option value="${ADD}">+ Dodaj nowy wzór</option>` +
-    (patterns.length
-      ? patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
-      : '<option disabled>— brak wzorców —</option>');
+    patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 
   $('pat').value = addMode ? ADD : (currentId || '');
   $('addBlock').hidden = !addMode;
