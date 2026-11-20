@@ -164,7 +164,7 @@ const DEFAULT_PATTERNS = [
 ];
 let patterns = JSON.parse(localStorage.getItem('patterns') || 'null') ?? DEFAULT_PATTERNS;
 let currentId = null;               // na starcie nic nie jest wybrane
-let addMode = false;
+let addMode = true;                 // po starcie: tryb dodawania nowego wzoru
 
 // ---------- kierunek odchylenia ----------
 // Kierunek odchylenia: 3 stopnie intensywności (słabe < 0,5 ≤ średnie < 1,0 ≤ mocne)
@@ -205,10 +205,10 @@ function save() {
 }
 
 function renderPatterns() {
+  if (!addMode && !current()) addMode = true;
 
   $('pat').innerHTML =
-    `<option value="">Dodaj / wybierz wzór</option>` +
-    `<option value="${ADD}">+ Dodaj nowy wzór</option>` +
+    `<option value="${ADD}">+ Dodaj / wybierz nowy wzór</option>` +
     patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 
   $('pat').value = addMode ? ADD : (currentId || '');
