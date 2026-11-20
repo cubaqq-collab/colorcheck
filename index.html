@@ -160,7 +160,7 @@ const DE_LIMIT = 0.8;
 
 // Wzór startowy: używany tylko przy pierwszym uruchomieniu (brak zapisu w localStorage)
 const DEFAULT_PATTERNS = [
-  { id: 'da-white-abs', name: 'DA WHITE ABS', L: 94.73, a: -1.87, b: 0.10 }
+  { id: 'da-white-abs', name: 'DA WHITE ABS', L: 94.72, a: -1.87, b: 0.18 }
 ];
 let patterns = JSON.parse(localStorage.getItem('patterns') || 'null') ?? DEFAULT_PATTERNS;
 let currentId = null;               // na starcie nic nie jest wybrane
