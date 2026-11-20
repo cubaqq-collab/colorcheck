@@ -1,4 +1,4 @@
-const CACHE = 'colorcheck-v3';
+const CACHE = 'colorcheck-v2';
 const FILES = ['./', './index.html', './color.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e =>

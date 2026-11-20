@@ -51,14 +51,6 @@
   .dlg{background:#181818;border:1px solid #333;border-radius:10px;padding:16px;max-width:360px;width:100%}
   .dlg p{margin:0 0 12px;font-size:16px;line-height:1.4}
   .dlg .row2 button{margin-top:0}
-  .picker{display:grid;grid-template-rows:1fr 1fr;gap:8px;height:260px;margin-top:8px}
-  .tile{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
-        gap:6px;padding:12px;border-radius:10px;cursor:pointer;color:#fff;min-height:0}
-  .tile input{display:none}
-  .tile.cam{background:#1f6fb2}
-  .tile.file-tile{background:#2a7}
-  .tile-title{font-size:20px;font-weight:600}
-  .tile-desc{font-size:13px;opacity:.95;line-height:1.35}
   .app-title{text-align:center;font-size:28px;letter-spacing:.08em;margin:8px 0 16px}
 </style>
 </head>
@@ -86,18 +78,10 @@
     <div class="lbl">a</div><div><input id="pa" type="text" inputmode="decimal" placeholder="a*"></div>
     <div class="lbl">b</div><div><input id="pb" type="text" inputmode="decimal" placeholder="b*"></div>
   </div>
-  <div class="picker">
-    <label class="tile cam">
-      <span class="tile-title">📷 Zrób zdjęcie</span>
-      <span class="tile-desc">Otworzy się aparat. Ekran fotografuj prosto, z bliska, bez odbić.</span>
-      <input id="pphotoCam" type="file" accept="image/*" capture="environment">
-    </label>
-    <label class="tile file-tile">
-      <span class="tile-title">🖼 Wybierz z pamięci</span>
-      <span class="tile-desc">Zdjęcie już zrobione, z galerii lub z plików telefonu.</span>
-      <input id="pphotoFile" type="file" accept="image/*">
-    </label>
-  </div>
+  <label class="file">
+    📷 Zrób zdjęcie lub wybierz z pamięci
+    <input id="pphoto" type="file" accept="image/*">
+  </label>
   <div id="pstatus" class="small" style="margin-top:6px"></div>
   <button id="savePat" class="tall">Zapisz wzór</button>
   <div class="small" id="cnt" style="margin-top:10px"></div>
@@ -112,18 +96,10 @@
   </div>
 
   <div class="sec">Sample</div>
-  <div class="picker">
-    <label class="tile cam">
-      <span class="tile-title">📷 Zrób zdjęcie</span>
-      <span class="tile-desc">Otworzy się aparat. Ekran fotografuj prosto, z bliska, bez odbić.</span>
-      <input id="photoCam" type="file" accept="image/*" capture="environment">
-    </label>
-    <label class="tile file-tile">
-      <span class="tile-title">🖼 Wybierz z pamięci</span>
-      <span class="tile-desc">Zdjęcie już zrobione, z galerii lub z plików telefonu.</span>
-      <input id="photoFile" type="file" accept="image/*">
-    </label>
-  </div>
+  <label class="file">
+    📷 Zrób zdjęcie lub wybierz z pamięci
+    <input id="photo" type="file" accept="image/*">
+  </label>
   <img id="preview" hidden>
   <div id="status"></div>
 
@@ -502,24 +478,21 @@ async function ocrFile(file, statusId, ids) {
   }
 }
 
-// Zdjęcie próbki (pomiar): aparat albo pamięć telefonu
-async function onSamplePhoto(e) {
+// Zdjęcie próbki (pomiar)
+$('photo').onchange = async e => {
   const file = e.target.files[0];
-  e.target.value = '';            // pozwala wybrać ten sam plik ponownie
   if (!file) return;
   $('preview').src = URL.createObjectURL(file);
   $('preview').hidden = false;
   await ocrFile(file, 'status', ['mL', 'ma', 'mb']);
-}
+};
+
 // Zdjęcie wzoru (dodawanie): wypełnia pola, zapis przyciskiem "Zapisz wzór"
-async function onPatternPhoto(e) {
+$('pphoto').onchange = async e => {
   const file = e.target.files[0];
-  e.target.value = '';
   if (!file) return;
   await ocrFile(file, 'pstatus', ['pL', 'pa', 'pb']);
-}
-['photoCam', 'photoFile'].forEach(id => $(id).onchange = onSamplePhoto);
-['pphotoCam', 'pphotoFile'].forEach(id => $(id).onchange = onPatternPhoto);
+};
 
 // ---------- start ----------
 renderPatterns();
