@@ -53,6 +53,9 @@
   .dlg p{margin:0 0 12px;font-size:16px;line-height:1.4}
   .dlg .row2 button{margin-top:0}
   button.save-btn{margin-top:10px}
+  .mlist label{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid #222;cursor:pointer}
+  .mlist input[type=checkbox]{width:20px;height:20px;margin:0;flex:0 0 20px}
+  .mcard{margin-top:6px}
   .app-title{text-align:center;font-size:28px;letter-spacing:.08em;margin:8px 0 16px}
 </style>
 </head>
@@ -62,7 +65,7 @@
 
 <!-- LEWA KOLUMNA: pomiar -->
 <section class="panel">
-  <h3>Wzór:</h3>
+  <h3>STD</h3>
 
   <div class="pat-row">
     <select id="pat"></select>
@@ -137,6 +140,31 @@
     ΔE powyżej 0,8 wyświetlane na czerwono.
   </div>
 </div>
+<div id="multiBlock" hidden>
+  <div class="sec">Wybierz wzory do porównania</div>
+  <div id="mList" class="mlist"></div>
+  <div class="sec">Sample</div>
+  <div class="picker">
+    <label class="tile cam">
+      <span class="tile-title">📷 Zrób zdjęcie</span>
+      <span class="tile-desc">Otworzy się aparat. Ekran fotografuj prosto, z bliska.</span>
+      <input id="xphotoCam" type="file" accept="image/*" capture="environment">
+    </label>
+    <label class="tile file-tile">
+      <span class="tile-title">🖼 Wybierz z pamięci</span>
+      <span class="tile-desc">Zdjęcie już zrobione, z galerii lub z plików telefonu.</span>
+      <input id="xphotoFile" type="file" accept="image/*">
+    </label>
+  </div>
+  <div id="xstatus" class="small" style="margin-top:6px"></div>
+  <div class="g6" style="margin-top:6px">
+    <div class="lbl">L</div><div><input id="xL" type="text" inputmode="decimal" placeholder="L*"></div>
+    <div class="lbl">a</div><div><input id="xa" type="text" inputmode="decimal" placeholder="a*"></div>
+    <div class="lbl">b</div><div><input id="xb" type="text" inputmode="decimal" placeholder="b*"></div>
+  </div>
+  <div id="mResults"></div>
+</div>
+
 </section>
 
 
@@ -169,6 +197,10 @@ const DEFAULT_PATTERNS = [
 let patterns = JSON.parse(localStorage.getItem('patterns') || 'null') ?? DEFAULT_PATTERNS;
 let currentId = null;               // na starcie nic nie jest wybrane
 let addMode = true;                 // po starcie: tryb dodawania nowego wzoru
+let multiMode = false;              // tryb Multi check
+const MULTI = '__multi__';
+let multiSel = new Set(JSON.parse(localStorage.getItem('multiSel') || '[]'));
+const saveMulti = () => localStorage.setItem('multiSel', JSON.stringify([...multiSel]));
 
 // ---------- kierunek odchylenia ----------
 // Kierunek odchylenia: 3 stopnie intensywności (słabe < 0,5 ≤ średnie < 1,0 ≤ mocne)
@@ -209,19 +241,22 @@ function save() {
 }
 
 function renderPatterns() {
-  if (!addMode && !current()) addMode = true;
+  if (!addMode && !multiMode && !current()) addMode = true;
 
   $('pat').innerHTML =
     `<option value="${ADD}">+ Dodaj / wybierz nowy wzór</option>` +
-    patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('') +
+    `<option value="${MULTI}">Multi check</option>`;
 
-  $('pat').value = addMode ? ADD : (currentId || '');
+  $('pat').value = addMode ? ADD : multiMode ? MULTI : (currentId || '');
   $('addBlock').hidden = !addMode;
-  $('patSw').hidden = addMode;
+  $('patSw').hidden = addMode || multiMode;
   $('pname').hidden = !addMode;
-  $('measBlock').hidden = addMode;
+  $('measBlock').hidden = addMode || multiMode;
+  $('multiBlock').hidden = !multiMode;
   $('savePat').hidden = !addMode;
-  $('delPat').hidden = addMode || !current();
+  $('delPat').hidden = addMode || multiMode || !current();
+  if (multiMode) { renderMultiList(); renderMultiResults(); }
   $('cnt').textContent = `Zapisanych wzorów: ${patterns.length}`;
   updateTarget();
   compute();
@@ -261,12 +296,10 @@ function compute() {
 
 // ---------- zdarzenia listy ----------
 $('pat').onchange = e => {
-  if (e.target.value === ADD) {
-    addMode = true;
-  } else {
-    addMode = false;
-    currentId = e.target.value;
-  }
+  const v = e.target.value;
+  addMode = v === ADD;
+  multiMode = v === MULTI;
+  if (!addMode && !multiMode) currentId = v || null;
   renderPatterns();
 };
 
@@ -282,6 +315,7 @@ $('savePat').onclick = () => {
   patterns.push(p);
   currentId = p.id;
   addMode = false;
+  multiMode = false;
   ['pname', 'pL', 'pa', 'pb'].forEach(i => $(i).value = '');
   renderPatterns();
 };
@@ -302,6 +336,7 @@ $('okDel').onclick = () => {
   $('confirm').hidden = true;
   if (!p) return;
   patterns = patterns.filter(x => x.id !== p.id);
+  multiSel.delete(p.id); saveMulti();
   currentId = patterns[0]?.id || null;
   renderPatterns();
 };
@@ -334,6 +369,60 @@ $('savePhoto').onclick = async () => {
 };
 
 ['mL', 'ma', 'mb'].forEach(id => $(id).oninput = compute);
+
+// ---------- Multi check ----------
+function renderMultiList() {
+  $('mList').innerHTML = patterns.map(p => `
+    <label>
+      <input type="checkbox" data-id="${p.id}" ${multiSel.has(p.id) ? 'checked' : ''}>
+      <span style="width:26px;height:26px;border-radius:6px;border:1px solid #444;flex:0 0 26px;background:${labToHex(p.L, p.a, p.b)}"></span>
+      <span>${p.name}</span>
+    </label>`).join('') || '<p class="small">Brak zapisanych wzorów. Dodaj wzór, a pojawi się tutaj.</p>';
+  $('mList').querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => {
+    cb.checked ? multiSel.add(cb.dataset.id) : multiSel.delete(cb.dataset.id);
+    saveMulti();
+    renderMultiResults();
+  });
+}
+
+function multiSample() {
+  const L = parseNum($('xL').value), a = parseNum($('xa').value), b = parseNum($('xb').value);
+  return [L, a, b].some(isNaN) ? null : { L, a, b };
+}
+
+function renderMultiResults() {
+  const chosen = patterns.filter(p => multiSel.has(p.id));
+  const m = multiSample();
+  if (!chosen.length) { $('mResults').innerHTML = '<p class="small">Zaznacz co najmniej jeden wzór na liście.</p>'; return; }
+  if (!m) { $('mResults').innerHTML = '<p class="small">Wpisz L, a, b próbki albo zrób zdjęcie.</p>'; return; }
+  $('mResults').innerHTML = chosen.map(p => {
+    const e76 = deltaE76(m, p), e00 = deltaE2000(m, p);
+    const c76 = e76 > DE_LIMIT ? 'bad-de' : '', c00 = e00 > DE_LIMIT ? 'bad-de' : '';
+    return `<div class="mcard">
+      <div class="sec">Target: ${p.name}</div>
+      <div class="g6">
+        <div class="lbl">L</div><div>${p.L.toFixed(2)}</div>
+        <div class="lbl">a</div><div>${p.a.toFixed(2)}</div>
+        <div class="lbl">b</div><div>${p.b.toFixed(2)}</div>
+      </div>
+      <div class="g6" style="margin-top:6px">
+        <div class="de"><div class="lbl">ΔE76</div><div class="${c76}">${pairChip(p, m)}${e76.toFixed(2)}</div></div>
+        <div class="de"><div class="lbl">ΔE2000</div><div class="${c00}">${pairChip(p, m)}<b>${e00.toFixed(2)}</b></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+['xL', 'xa', 'xb'].forEach(id => $(id).oninput = renderMultiResults);
+
+async function onMultiPhoto(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  await ocrFile(file, 'xstatus', ['xL', 'xa', 'xb']);
+  renderMultiResults();
+}
+['xphotoCam', 'xphotoFile'].forEach(id => $(id).onchange = onMultiPhoto);
 
 // ---------- OCR ----------
 let worker = null;
