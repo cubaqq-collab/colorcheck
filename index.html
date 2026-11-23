@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#111111">
 <link rel="icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   body{font-family:system-ui,sans-serif;margin:0;padding:12px;background:#111;color:#eee}
   .wrap{display:grid;gap:16px;max-width:560px;margin:0 auto}
@@ -51,6 +52,7 @@
   .dlg{background:#181818;border:1px solid #333;border-radius:10px;padding:16px;max-width:360px;width:100%}
   .dlg p{margin:0 0 12px;font-size:16px;line-height:1.4}
   .dlg .row2 button{margin-top:0}
+  button.save-btn{margin-top:10px}
   .app-title{text-align:center;font-size:28px;letter-spacing:.08em;margin:8px 0 16px}
 </style>
 </head>
@@ -119,6 +121,8 @@
     <div class="de"><div class="lbl">ΔE76</div><div id="e76">–</div></div>
     <div class="de"><div class="lbl">ΔE2000</div><div id="e00">–</div></div>
   </div>
+
+  <button id="savePhoto" class="sec-btn save-btn" type="button">Zapisz pomiar</button>
 
   <div class="legend">
     <span>ΔL+ <i class="chip1" style="background:#fff59d"></i><i class="chip1" style="background:#ffeb3b"></i><i class="chip1" style="background:#ffd600"></i> jaśniej</span>
@@ -300,6 +304,33 @@ $('okDel').onclick = () => {
   patterns = patterns.filter(x => x.id !== p.id);
   currentId = patterns[0]?.id || null;
   renderPatterns();
+};
+
+// Zapis całego panelu pomiaru do pliku JPG
+$('savePhoto').onclick = async () => {
+  const btn = $('savePhoto');
+  const panel = btn.closest('section');
+  if (!window.html2canvas) return alert('Nie udało się załadować modułu zapisu. Sprawdź połączenie z internetem.');
+  btn.style.visibility = 'hidden';
+  try {
+    const canvas = await html2canvas(panel, { backgroundColor: '#181818', scale: 2 });
+    const p = current();
+    const name = (p ? p.name : 'pomiar').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '');
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    canvas.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${name}_${stamp}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, 'image/jpeg', 0.92);
+  } catch (err) {
+    alert('Nie udało się zapisać zdjęcia: ' + err.message);
+  } finally {
+    btn.style.visibility = '';
+  }
 };
 
 ['mL', 'ma', 'mb'].forEach(id => $(id).oninput = compute);
