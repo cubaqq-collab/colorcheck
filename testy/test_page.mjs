@@ -24,6 +24,9 @@ const inline = (color + '\n' + page)
   .replace(/^import .*$/mg, '')
   .replace(/^export /mg, '')
   .replace(/^(\s*)export /mg, '$1');
+// atrapa html2canvas: rejestruje wywołania, zwraca blob
+w.__shots = [];
+w.html2canvas = async (el) => { w.__shots.push(el); return { toBlob: cb => cb(new w.Blob(['x'], { type: 'image/jpeg' })) }; };
 try { w.eval(inline); } catch (e) { console.log('RUNTIME ERROR:', e.message); process.exit(1); }
 await new Promise(r => setTimeout(r, 200));
 
@@ -32,9 +35,9 @@ const $ = id => w.document.getElementById(id);
 const setVal = (id, v) => { $(id).value = v; $(id).dispatchEvent(new w.Event('input')); };
 
 // 1. Brak wzorców -> panel dodawania widoczny
-ok(!$('addBlock').hidden, 'bez wzorców panel dodawania widoczny od razu');
-ok($('pat').options[0].value === '' && $('pat').options[0].text === 'Dodaj / wybierz wzór', 'pierwsza pozycja: "Dodaj / wybierz wzór"');
-ok($('pat').options[1].value === '__add__', 'druga pozycja: "+ Dodaj nowy wzór"');
+ok(!$('addBlock').hidden, 'po starcie: panel dodawania widoczny');
+ok($('pat').value === '__add__', 'po starcie zaznaczone "+ Dodaj / wybierz nowy wzór"');
+ok($('pat').options[0].value === '__add__' && $('pat').options[0].text === '+ Dodaj / wybierz nowy wzór', 'pierwsza pozycja: "+ Dodaj / wybierz nowy wzór"');
 
 // 2. Dodanie wzorca
 const addTo = (name, L, a, b) => {
@@ -68,8 +71,8 @@ ok(e76big.classList.contains('bad-de'), 'dE76 > 0,8 jest czerwone');
 
 // 7. Dodanie drugiego wzorca, przełączanie listy
 addTo('Szary', 50, 0, 0);
-ok($('pat').options.length === 4, 'lista: wybierz + dodaj + 2 wzorce');
-$('pat').value = $('pat').options[2].value; $('pat').dispatchEvent(new w.Event('change'));
+ok($('pat').options.length === 3, 'lista: dodaj + 2 wzorce');
+$('pat').value = $('pat').options[1].value; $('pat').dispatchEvent(new w.Event('change'));
 ok($('tL').textContent !== '–', 'wybór wzorca z listy ustawia target');
 ok($('addBlock').hidden, 'wybór wzorca chowa panel dodawania');
 
@@ -110,7 +113,7 @@ w.HTMLCanvasElement.prototype.getContext = () => ({
 });
 $('pat').value = '__add__'; $('pat').dispatchEvent(new w.Event('change'));
 ok(!$('savePat').hidden, 'w trybie dodawania przycisk "Zapisz wzór" widoczny');
-ok($('pat').options[1].text === '+ Dodaj nowy wzór', 'opcja: "+ Dodaj nowy wzór"');
+ok($('pat').options[0].text === '+ Dodaj / wybierz nowy wzór', 'opcja: "+ Dodaj / wybierz nowy wzór"');
 const pph = $('pphoto');
 Object.defineProperty(pph, 'files', { value: [{ name: 'wzor.jpg' }], configurable: true });
 pph.dispatchEvent(new w.Event('change'));
@@ -180,6 +183,18 @@ ok(JSON.parse(w.localStorage.getItem('patterns')).length === before - 1, 'Usuń 
 ok($('confirm').hidden, 'po Usuń okno się zamyka');
 $('pat').value = '__add__'; $('pat').dispatchEvent(new w.Event('change'));
 ok($('delPat').hidden, 'w trybie dodawania kosz ukryty');
+
+// 20. Zapisz pomiar: przycisk między wynikami a legendą, zrzut panelu do JPG
+ok(!!$('savePhoto'), 'przycisk "Zapisz pomiar" istnieje');
+ok($('e00').compareDocumentPosition($('savePhoto')) & w.Node.DOCUMENT_POSITION_FOLLOWING, 'przycisk jest za wynikami dE');
+ok($('savePhoto').compareDocumentPosition($('legend') || w.document.querySelector('.legend')) & w.Node.DOCUMENT_POSITION_FOLLOWING, 'przycisk jest przed legendą');
+$('pat').value = currentIdForTest(); $('pat').dispatchEvent(new w.Event('change'));
+const shotsBefore = w.__shots.length;
+$('savePhoto').click();
+await new Promise(r => setTimeout(r, 50));
+ok(w.__shots.length === shotsBefore + 1, 'Zapisz pomiar wywołuje zrzut');
+ok(w.__shots[w.__shots.length - 1].tagName === 'SECTION', 'zrzut obejmuje cały panel (section)');
+ok($('savePhoto').style.visibility === '', 'przycisk przywracany po zrzucie');
 
 console.log(fail ? `\n${fail} FAILED` : '\nTESTY STRONY PRZESZŁY');
 process.exit(fail ? 1 : 0);
