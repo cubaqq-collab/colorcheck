@@ -200,6 +200,7 @@ let addMode = true;                 // po starcie: tryb dodawania nowego wzoru
 let multiMode = false;              // tryb Multi check
 const MULTI = '__multi__';
 let multiSel = new Set(JSON.parse(localStorage.getItem('multiSel') || '[]'));
+const byName = list => [...list].sort((a, b) => a.name.localeCompare(b.name, 'pl', { sensitivity: 'base', numeric: true }));
 const saveMulti = () => localStorage.setItem('multiSel', JSON.stringify([...multiSel]));
 
 // ---------- kierunek odchylenia ----------
@@ -245,7 +246,7 @@ function renderPatterns() {
 
   $('pat').innerHTML =
     `<option value="${ADD}">+ Dodaj / wybierz nowy wzór</option>` +
-    patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('') +
+    byName(patterns).map(p => `<option value="${p.id}">${p.name}</option>`).join('') +
     `<option value="${MULTI}">Multi check</option>`;
 
   $('pat').value = addMode ? ADD : multiMode ? MULTI : (currentId || '');
@@ -313,6 +314,7 @@ $('savePat').onclick = () => {
   };
   if ([p.L, p.a, p.b].some(isNaN)) return alert('Podaj L, a, b wzoru');
   patterns.push(p);
+  patterns = byName(patterns);   // zapis zawsze posortowany alfabetycznie
   currentId = p.id;
   addMode = false;
   multiMode = false;
@@ -372,7 +374,7 @@ $('savePhoto').onclick = async () => {
 
 // ---------- Multi check ----------
 function renderMultiList() {
-  $('mList').innerHTML = patterns.map(p => `
+  $('mList').innerHTML = byName(patterns).map(p => `
     <label>
       <input type="checkbox" data-id="${p.id}" ${multiSel.has(p.id) ? 'checked' : ''}>
       <span style="width:26px;height:26px;border-radius:6px;border:1px solid #444;flex:0 0 26px;background:${labToHex(p.L, p.a, p.b)}"></span>
@@ -391,7 +393,7 @@ function multiSample() {
 }
 
 function renderMultiResults() {
-  const chosen = patterns.filter(p => multiSel.has(p.id));
+  const chosen = byName(patterns).filter(p => multiSel.has(p.id));
   const m = multiSample();
   if (!chosen.length) { $('mResults').innerHTML = '<p class="small">Zaznacz co najmniej jeden wzór na liście.</p>'; return; }
   if (!m) { $('mResults').innerHTML = '<p class="small">Wpisz L, a, b próbki albo zrób zdjęcie.</p>'; return; }
