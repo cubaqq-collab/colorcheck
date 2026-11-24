@@ -218,8 +218,8 @@ function renderPatterns() {
 
   $('pat').innerHTML =
     `<option value="${ADD}">+ Dodaj / wybierz nowy wzór</option>` +
-    byName(patterns).map(p => `<option value="${p.id}">${p.name}</option>`).join('') +
-    `<option value="${MULTI}">Multi check</option>`;
+    `<option value="${MULTI}">Multi check</option>` +
+    byName(patterns).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 
   $('pat').value = addMode ? ADD : multiMode ? MULTI : (currentId || '');
   $('addBlock').hidden = !addMode;
