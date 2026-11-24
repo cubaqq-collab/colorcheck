@@ -51,7 +51,7 @@
   .mlist label{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid #222;cursor:pointer}
   .mlist input[type=checkbox]{width:20px;height:20px;margin:0;flex:0 0 20px}
   .mcard{margin-top:6px}
-  .g6.inp{grid-template-columns:18px 1fr 18px 1fr 18px 1fr}
+  .g6.inp{grid-template-columns:26px 1fr 26px 1fr 26px 1fr}
   .g6.inp > div{padding:4px 2px;min-height:46px}
   .g6.inp .lbl{font-size:14px;padding:0}
   .g6.inp input{padding:8px 4px;font-size:16px;letter-spacing:0}
@@ -78,9 +78,9 @@
   <div id="addBlock" hidden>
   <div class="sec">Nowy wzór</div>
   <div class="g6 inp" style="margin-top:8px">
-    <div class="lbl">L</div><div><input id="pL" type="text" inputmode="decimal" placeholder="L*"></div>
-    <div class="lbl">a</div><div><input id="pa" type="text" inputmode="decimal" placeholder="a*"></div>
-    <div class="lbl">b</div><div><input id="pb" type="text" inputmode="decimal" placeholder="b*"></div>
+    <div class="lbl">L*</div><div><input id="pL" type="text" inputmode="decimal" placeholder="L*"></div>
+    <div class="lbl">a*</div><div><input id="pa" type="text" inputmode="decimal" placeholder="a*"></div>
+    <div class="lbl">b*</div><div><input id="pb" type="text" inputmode="decimal" placeholder="b*"></div>
   </div>
   <button id="savePat" class="tall">Zapisz wzór</button>
   <div class="small" id="cnt" style="margin-top:10px"></div>
@@ -88,26 +88,27 @@
 </div>
 <div id="measBlock">
 <div class="sec">Target</div>
-  <div class="g6">
-    <div class="lbl">L</div><div id="tL">–</div>
-    <div class="lbl">a</div><div id="ta">–</div>
-    <div class="lbl">b</div><div id="tb">–</div>
+  <div class="g6 inp">
+    <div class="lbl">L*</div><div id="tL">–</div>
+    <div class="lbl">a*</div><div id="ta">–</div>
+    <div class="lbl">b*</div><div id="tb">–</div>
   </div>
 
   <div class="sec">Sample</div>
 
   <div class="g6 inp">
-    <div class="lbl">L</div><div><input id="mL" type="text" inputmode="decimal" placeholder="L*"></div>
-    <div class="lbl">a</div><div><input id="ma" type="text" inputmode="decimal" placeholder="a*"></div>
-    <div class="lbl">b</div><div><input id="mb" type="text" inputmode="decimal" placeholder="b*"></div>
-
+    <div class="lbl">L*</div><div><input id="mL" type="text" inputmode="decimal" placeholder="L*"></div>
+    <div class="lbl">a*</div><div><input id="ma" type="text" inputmode="decimal" placeholder="a*"></div>
+    <div class="lbl">b*</div><div><input id="mb" type="text" inputmode="decimal" placeholder="b*"></div>
+  </div>
+  <div class="g6">
     <div class="lbl">ΔL</div><div id="dL">–</div>
     <div class="lbl">Δa</div><div id="da">–</div>
     <div class="lbl">Δb</div><div id="db">–</div>
 
-    <div class="lbl">dew.</div><div id="cL"></div>
-    <div class="lbl">dew.</div><div id="ca"></div>
-    <div class="lbl">dew.</div><div id="cb"></div>
+    <div class="lbl">≏</div><div id="cL"></div>
+    <div class="lbl">≏</div><div id="ca"></div>
+    <div class="lbl">≏</div><div id="cb"></div>
 
     <div class="de"><div class="lbl">ΔE76</div><div id="e76">–</div></div>
     <div class="de"><div class="lbl">ΔE2000</div><div id="e00">–</div></div>
@@ -133,9 +134,9 @@
   <div id="mList" class="mlist" hidden></div>
   <div class="sec">Sample</div>
   <div class="g6 inp" style="margin-top:6px">
-    <div class="lbl">L</div><div><input id="xL" type="text" inputmode="decimal" placeholder="L*"></div>
-    <div class="lbl">a</div><div><input id="xa" type="text" inputmode="decimal" placeholder="a*"></div>
-    <div class="lbl">b</div><div><input id="xb" type="text" inputmode="decimal" placeholder="b*"></div>
+    <div class="lbl">L*</div><div><input id="xL" type="text" inputmode="decimal" placeholder="L*"></div>
+    <div class="lbl">a*</div><div><input id="xa" type="text" inputmode="decimal" placeholder="a*"></div>
+    <div class="lbl">b*</div><div><input id="xb" type="text" inputmode="decimal" placeholder="b*"></div>
   </div>
   <div id="mResults"></div>
   <button id="savePhotoMulti" class="sec-btn save-btn" type="button">Zapisz pomiar</button>
@@ -422,10 +423,10 @@ function renderMultiResults() {
     const c76 = e76 > DE_LIMIT ? 'bad-de' : '', c00 = e00 > DE_LIMIT ? 'bad-de' : '';
     return `<div class="mcard">
       <div class="sec">Target: ${p.name}</div>
-      <div class="g6">
-        <div class="lbl">L</div><div>${p.L.toFixed(2)}</div>
-        <div class="lbl">a</div><div>${p.a.toFixed(2)}</div>
-        <div class="lbl">b</div><div>${p.b.toFixed(2)}</div>
+      <div class="g6 inp">
+        <div class="lbl">L*</div><div>${p.L.toFixed(2)}</div>
+        <div class="lbl">a*</div><div>${p.a.toFixed(2)}</div>
+        <div class="lbl">b*</div><div>${p.b.toFixed(2)}</div>
       </div>
       <div class="g6" style="margin-top:6px">
         <div class="de"><div class="lbl">ΔE76</div><div class="${c76}">${pairChip(p, m)}${e76.toFixed(2)}</div></div>
