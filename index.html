@@ -162,18 +162,60 @@ const fmt = (x, d = 2) => (x >= 0 ? '+' : '') + x.toFixed(d);
 const ADD = '__add__';
 const DE_LIMIT = 0.8;
 
-// Wzór startowy: używany tylko przy pierwszym uruchomieniu (brak zapisu w localStorage)
+// Wzory startowe z pliku targets_of_color.xlsm (39 pozycji, posortowane alfabetycznie).
+// Używane tylko, gdy w pamięci nie ma jeszcze zapisanej listy (klucz 'patterns2').
 const DEFAULT_PATTERNS = [
-  { id: 'da-white-abs', name: 'DA WHITE ABS', L: 94.72, a: -1.87, b: 0.18 }
+  { id: 'w01', name: "All Black PCM Voestalpine", L: 27.65, a: -0.03, b: -1.19 },
+  { id: 'w02', name: "Black Caviar AN HQ PCM", L: 30.63, a: 0.45, b: 0.35 },
+  { id: 'w03', name: "Black Caviar CCM FRONT", L: 36.99, a: 0.09, b: -0.66 },
+  { id: 'w04', name: "Black Caviar Lampre PCM", L: 28.93, a: 0.42, b: 1.25 },
+  { id: 'w05', name: "Black Caviar PCM FRAME", L: 38.41, a: 0.26, b: 0.35 },
+  { id: 'w06', name: "Cool White ABS", L: 91.75, a: -1.14, b: -2.81 },
+  { id: 'w07', name: "Cool White ABS 3%", L: 91.84, a: -1.43, b: -2.43 },
+  { id: 'w08', name: "Cool White ABS-RS Haier", L: 92.07, a: -1.51, b: -2.61 },
+  { id: 'w09', name: "Cool White HIPS Liner", L: 90.82, a: -1.29, b: -2.25 },
+  { id: 'w10', name: "Cool White PP 4%", L: 91.51, a: -0.93, b: -2.56 },
+  { id: 'w11', name: "DA White ABS HQ Lotte", L: 94.73, a: -1.87, b: 0.1 },
+  { id: 'w12', name: "DA White PCM Arcelor", L: 93.75, a: -1.81, b: -0.55 },
+  { id: 'w13', name: "DA White PCM Voestalpine", L: 93.26, a: -1.29, b: -0.13 },
+  { id: 'w14', name: "Dark Gray ABS-RS Haier", L: 31.37, a: 0.38, b: -0.8 },
+  { id: 'w15', name: "Dark Gray Lotte", L: 31.95, a: 0.3, b: -0.46 },
+  { id: 'w16', name: "Dark Holder Gray MT42", L: 57.88, a: -0.53, b: 0 },
+  { id: 'w17', name: "Dark Holder Gray RMT42", L: 57.96, a: -0.53, b: -0.03 },
+  { id: 'w18', name: "Ebony Black ABS", L: 27.06, a: 0.13, b: -0.66 },
+  { id: 'w19', name: "Gentle Black DCM", L: 38.79, a: -0.36, b: 0.33 },
+  { id: 'w20', name: "Gentle Silver DCM", L: 62.42, a: -0.65, b: 0.68 },
+  { id: 'w21', name: "I Black ABS 2% Schulman", L: 22.62, a: 0.08, b: -0.41 },
+  { id: 'w22', name: "I Black barwiony w masie", L: 26.74, a: -0.12, b: -1.23 },
+  { id: 'w23', name: "Inox Gray ABS", L: 47.08, a: -0.04, b: 1.86 },
+  { id: 'w24', name: "Inox Gray ABS-RS Haier", L: 47.39, a: -0.12, b: 1.58 },
+  { id: 'w25', name: "Inox Gray PCM FRAME Posco", L: 44.03, a: 0.22, b: 1.09 },
+  { id: 'w26', name: "Inox Gray PCM FRAME Voestalpine", L: 48.63, a: 0.16, b: 1.87 },
+  { id: 'w27', name: "Inox Gray PCM FRONT Posco", L: 51.13, a: 0.28, b: 1.45 },
+  { id: 'w28', name: "Inox Gray PCM FRONT Voestalpine", L: 50.88, a: 0.88, b: 2.85 },
+  { id: 'w29', name: "Matt Doi Metal", L: 38.79, a: -0.36, b: 0.33 },
+  { id: 'w30', name: "Matt Doi S9 HQ MS", L: 66.98, a: -0.15, b: 1.52 },
+  { id: 'w31', name: "Metal Graphite VCM", L: 68.97, a: 0.13, b: -0.29 },
+  { id: 'w32', name: "Snow White ABS 6%", L: 91.74, a: -1.47, b: -0.27 },
+  { id: 'w33', name: "Snow White PCM 20% Voestalpine", L: 91.71, a: -1.35, b: -1.4 },
+  { id: 'w34', name: "Snow White PCM Arcelor", L: 92, a: -1.44, b: -1.52 },
+  { id: 'w35', name: "Urban Silver PCM Arcelor", L: 52.57, a: 0.71, b: 1.79 },
+  { id: 'w36', name: "Urban Silver PCM Voestalpine", L: 52.75, a: 1.14, b: 2.4 },
+  { id: 'w37', name: "Vanila Beige PCM Voestalpine", L: 89.2, a: 0.65, b: 10.62 },
+  { id: 'w38', name: "Versailles Gray ABS Hyundai", L: 41.86, a: -0.26, b: 1.01 },
+  { id: 'w39', name: "WM ASSY HINGE", L: 65.45, a: -0.24, b: 0.62 }
 ];
-let patterns = JSON.parse(localStorage.getItem('patterns') || 'null') ?? DEFAULT_PATTERNS;
+// Nowe klucze pamięci: stare wzory (poprzednie klucze) nie są już wczytywane
+localStorage.removeItem('patterns');
+localStorage.removeItem('multiSel');
+let patterns = JSON.parse(localStorage.getItem('patterns2') || 'null') ?? DEFAULT_PATTERNS;
 let currentId = null;               // na starcie nic nie jest wybrane
 let addMode = true;                 // po starcie: tryb dodawania nowego wzoru
 let multiMode = false;              // tryb Multi check
 const MULTI = '__multi__';
-let multiSel = new Set(JSON.parse(localStorage.getItem('multiSel') || '[]'));
+let multiSel = new Set(JSON.parse(localStorage.getItem('multiSel2') || '[]'));
 const byName = list => [...list].sort((a, b) => a.name.localeCompare(b.name, 'pl', { sensitivity: 'base', numeric: true }));
-const saveMulti = () => localStorage.setItem('multiSel', JSON.stringify([...multiSel]));
+const saveMulti = () => localStorage.setItem('multiSel2', JSON.stringify([...multiSel]));
 
 // ---------- kierunek odchylenia ----------
 // Kierunek odchylenia: 3 stopnie intensywności (słabe < 0,5 ≤ średnie < 1,0 ≤ mocne)
@@ -209,7 +251,7 @@ const measured = () => {
 };
 
 function save() {
-  localStorage.setItem('patterns', JSON.stringify(patterns));
+  localStorage.setItem('patterns2', JSON.stringify(patterns));
   localStorage.setItem('currentId', currentId || '');
 }
 
