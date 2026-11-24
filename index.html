@@ -7,7 +7,6 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#111111">
 <link rel="icon" href="icon-192.png">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   body{font-family:system-ui,sans-serif;margin:0;padding:12px;background:#111;color:#eee}
@@ -20,10 +19,6 @@
   button{padding:12px;font-size:16px;border:0;border-radius:8px;background:#2a7;color:#fff;width:100%;margin-top:8px}
   button.danger{background:#a33}
   .swatch{width:100%;height:80px;border-radius:8px;border:1px solid #444;margin-top:8px;background:#222}
-  .file{display:block;padding:12px;text-align:center;background:#2a7;border-radius:8px;cursor:pointer;font-size:16px;margin-top:6px}
-  .file input{display:none}
-  img#preview{width:100%;border-radius:8px;margin-top:8px}
-  #status{font-size:14px;color:#aaa;min-height:20px;margin:6px 0}
   .g6{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid #333;border-radius:6px;overflow:hidden}
   .g6 > div{padding:6px 4px;text-align:center;border-right:1px solid #333;border-bottom:1px solid #333;
             font-size:14px;display:flex;align-items:center;justify-content:center;min-height:40px;word-break:break-word}
@@ -83,11 +78,6 @@
     <div class="lbl">a</div><div><input id="pa" type="text" inputmode="decimal" placeholder="a*"></div>
     <div class="lbl">b</div><div><input id="pb" type="text" inputmode="decimal" placeholder="b*"></div>
   </div>
-  <label class="file">
-    📷 Zrób zdjęcie lub wybierz z pamięci
-    <input id="pphoto" type="file" accept="image/*">
-  </label>
-  <div id="pstatus" class="small" style="margin-top:6px"></div>
   <button id="savePat" class="tall">Zapisz wzór</button>
   <div class="small" id="cnt" style="margin-top:10px"></div>
 
@@ -101,12 +91,6 @@
   </div>
 
   <div class="sec">Sample</div>
-  <label class="file">
-    📷 Zrób zdjęcie lub wybierz z pamięci
-    <input id="photo" type="file" accept="image/*">
-  </label>
-  <img id="preview" hidden>
-  <div id="status"></div>
 
   <div class="g6">
     <div class="lbl">L</div><div><input id="mL" type="text" inputmode="decimal" placeholder="L*"></div>
@@ -141,28 +125,16 @@
   </div>
 </div>
 <div id="multiBlock" hidden>
-  <div class="sec">Wybierz wzory do porównania</div>
-  <div id="mList" class="mlist"></div>
+  <button id="mToggle" class="sec-btn" type="button">Wybierz wzory (0) ▼</button>
+  <div id="mList" class="mlist" hidden></div>
   <div class="sec">Sample</div>
-  <div class="picker">
-    <label class="tile cam">
-      <span class="tile-title">📷 Zrób zdjęcie</span>
-      <span class="tile-desc">Otworzy się aparat. Ekran fotografuj prosto, z bliska.</span>
-      <input id="xphotoCam" type="file" accept="image/*" capture="environment">
-    </label>
-    <label class="tile file-tile">
-      <span class="tile-title">🖼 Wybierz z pamięci</span>
-      <span class="tile-desc">Zdjęcie już zrobione, z galerii lub z plików telefonu.</span>
-      <input id="xphotoFile" type="file" accept="image/*">
-    </label>
-  </div>
-  <div id="xstatus" class="small" style="margin-top:6px"></div>
   <div class="g6" style="margin-top:6px">
     <div class="lbl">L</div><div><input id="xL" type="text" inputmode="decimal" placeholder="L*"></div>
     <div class="lbl">a</div><div><input id="xa" type="text" inputmode="decimal" placeholder="a*"></div>
     <div class="lbl">b</div><div><input id="xb" type="text" inputmode="decimal" placeholder="b*"></div>
   </div>
   <div id="mResults"></div>
+  <button id="savePhotoMulti" class="sec-btn save-btn" type="button">Zapisz pomiar</button>
 </div>
 
 </section>
@@ -343,16 +315,14 @@ $('okDel').onclick = () => {
   renderPatterns();
 };
 
-// Zapis całego panelu pomiaru do pliku JPG
-$('savePhoto').onclick = async () => {
-  const btn = $('savePhoto');
+// Zapis całego panelu do pliku JPG (wspólne dla pojedynczego pomiaru i Multi check)
+async function savePanel(btn, baseName) {
   const panel = btn.closest('section');
   if (!window.html2canvas) return alert('Nie udało się załadować modułu zapisu. Sprawdź połączenie z internetem.');
   btn.style.visibility = 'hidden';
   try {
     const canvas = await html2canvas(panel, { backgroundColor: '#181818', scale: 2 });
-    const p = current();
-    const name = (p ? p.name : 'pomiar').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '');
+    const name = String(baseName).replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '') || 'pomiar';
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     canvas.toBlob(blob => {
       const a = document.createElement('a');
@@ -368,7 +338,9 @@ $('savePhoto').onclick = async () => {
   } finally {
     btn.style.visibility = '';
   }
-};
+}
+$('savePhoto').onclick = () => savePanel($('savePhoto'), current()?.name || 'pomiar');
+$('savePhotoMulti').onclick = () => savePanel($('savePhotoMulti'), 'multi_check');
 
 ['mL', 'ma', 'mb'].forEach(id => $(id).oninput = compute);
 
@@ -383,8 +355,10 @@ function renderMultiList() {
   $('mList').querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => {
     cb.checked ? multiSel.add(cb.dataset.id) : multiSel.delete(cb.dataset.id);
     saveMulti();
+    updateMToggle();
     renderMultiResults();
   });
+  updateMToggle();
 }
 
 function multiSample() {
@@ -417,200 +391,14 @@ function renderMultiResults() {
 
 ['xL', 'xa', 'xb'].forEach(id => $(id).oninput = renderMultiResults);
 
-async function onMultiPhoto(e) {
-  const file = e.target.files[0];
-  e.target.value = '';
-  if (!file) return;
-  await ocrFile(file, 'xstatus', ['xL', 'xa', 'xb']);
-  renderMultiResults();
+// Rozwijanie listy wzorów
+function updateMToggle() {
+  const open = !$('mList').hidden;
+  $('mToggle').textContent = `Wybierz wzory (${multiSel.size}) ${open ? '▲' : '▼'}`;
 }
-['xphotoCam', 'xphotoFile'].forEach(id => $(id).onchange = onMultiPhoto);
-
-// ---------- OCR ----------
-let worker = null;
-async function getWorker() {
-  if (!worker) {
-    worker = await Tesseract.createWorker('eng');
-    // psm 6 = jeden blok tekstu (tabela); bez whitelisty, bo ogranicza przecinki i etykiety
-    await worker.setParameters({
-      tessedit_pageseg_mode: '6',
-      preserve_interword_spaces: '1'
-    });
-  }
-  return worker;
-}
-
-// OCR-PARSER-BEGIN
-// Obraz: powiększenie do ~1600 px (małe zdjęcia też), skala szarości, progowanie Otsu
-function otsuThreshold(gray) {
-  const hist = new Array(256).fill(0);
-  for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
-  const total = gray.length;
-  let sumAll = 0;
-  for (let t = 0; t < 256; t++) sumAll += t * hist[t];
-  let wB = 0, sumB = 0, best = 0, thr = 127;
-  for (let t = 0; t < 256; t++) {
-    wB += hist[t];
-    if (!wB) continue;
-    const wF = total - wB;
-    if (!wF) break;
-    sumB += t * hist[t];
-    const mB = sumB / wB, mF = (sumAll - sumB) / wF;
-    const between = wB * wF * (mB - mF) ** 2;
-    if (between > best) { best = between; thr = t; }
-  }
-  return thr;
-}
-
-function prepareImage(img) {
-  const scale = Math.min(4, Math.max(1, 1600 / img.width));
-  const cv = document.createElement('canvas');
-  cv.width = Math.round(img.width * scale);
-  cv.height = Math.round(img.height * scale);
-  const ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0, cv.width, cv.height);
-  const d = ctx.getImageData(0, 0, cv.width, cv.height);
-  const px = d.data, n = cv.width * cv.height;
-  const gray = new Uint8ClampedArray(n);
-  for (let i = 0, j = 0; i < px.length; i += 4, j++) {
-    gray[j] = Math.round(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]);
-  }
-  // rozciągnięcie kontrastu
-  let lo = 255, hi = 0;
-  for (let j = 0; j < n; j++) { if (gray[j] < lo) lo = gray[j]; if (gray[j] > hi) hi = gray[j]; }
-  const k = hi > lo ? 255 / (hi - lo) : 1;
-  for (let j = 0; j < n; j++) gray[j] = Math.min(255, Math.max(0, (gray[j] - lo) * k));
-  const t = otsuThreshold(gray);
-  for (let i = 0, j = 0; i < px.length; i += 4, j++) {
-    const v = gray[j] > t ? 255 : 0;
-    px[i] = px[i + 1] = px[i + 2] = v; px[i + 3] = 255;
-  }
-  ctx.putImageData(d, 0, 0);
-  return cv;
-}
-
-// Liczba z OCR. Wartości na ekranie mają zawsze 2 miejsca po przecinku,
-// więc liczba bez separatora (np. "9457", "-209") dostaje kropkę przed dwiema ostatnimi cyframi.
-function normNumber(tok) {
-  const t = tok.replace(/^[=‘’'"(|]+/, '').replace(/[.,;:)]+$/, '');
-  if (!/^[-+]?\d+(?:[.,]\d+)?$/.test(t)) return null;
-  if (/[.,]/.test(t)) return parseFloat(t.replace(',', '.'));
-  const neg = t.startsWith('-');
-  const digits = t.replace(/^[-+]/, '');
-  if (digits.length < 3 || digits.length > 5) return null;
-  const core = digits.length === 5 ? digits.slice(0, 4) : digits; // 5 cyfr = dodatkowy znak szumu
-  const v = parseFloat(core.slice(0, -2) + '.' + core.slice(-2));
-  return neg ? -v : v;
-}
-
-const LABEL = /^([LabB])[*'`’]?[=:]?$/;
-
-function inRange(field, v) {
-  if (v === null) return false;
-  return field === 'L' ? v >= 0 && v <= 100 : v >= -128 && v <= 128;
-}
-
-function parseLab(raw) {
-  const res = { L: null, a: null, b: null };
-  raw = raw.replace(/[−–—]/g, '-');
-  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-
-  // 1) etykiety: "L* 52.31", "a*= -1.2", "L*=52,31" (także w jednej linii)
-  let cur = null, labelFound = false;
-  for (const line of lines) {
-    for (let tok of line.split(/\s+/)) {
-      // etykieta przyklejona do wartości, np. "L*=52,31"
-      const glued = tok.match(/^([LabB])[*'`’]?[=:](.+)$/);
-      if (glued) {
-        cur = glued[1] === 'L' ? 'L' : glued[1].toLowerCase(); labelFound = true;
-        const v = normNumber(glued[2]);
-        if (v !== null && inRange(cur, v) && res[cur] === null) { res[cur] = v; cur = null; }
-        continue;
-      }
-      const m = tok.match(LABEL);
-      if (m) {
-        const f = m[1] === 'L' ? 'L' : m[1].toLowerCase();
-        cur = f; labelFound = true; continue;
-      }
-      if (cur) {
-        const v = normNumber(tok);
-        if (v !== null && res[cur] === null && inRange(cur, v)) { res[cur] = v; cur = null; }
-      }
-    }
-  }
-  if (labelFound) return res;
-
-  // 2) bez etykiet: wiersze z 2 liczbami (L/a/b, a na ekranie także 4. wiersz GU)
-  //    pomijamy linie z datą, godziną i słowami; wiersz L musi mieć wartość 0..100
-  const rows = [];
-  for (const line of lines) {
-    const toks = line.split(/\s+/);
-    if (toks.some(t => /[/:]/.test(t))) continue;
-    const words = toks.filter(t => /[A-Za-z]/.test(t) && !LABEL.test(t) && !/^[A-Za-z]\*$/.test(t));
-    if (words.length) continue;
-    const nums = toks.map(normNumber).filter(v => v !== null);
-    if (nums.length >= 2) rows.push(nums);
-  }
-  if (rows.length >= 3 && inRange('L', rows[0][0]) && inRange('a', rows[1][0]) && inRange('b', rows[2][0])) {
-    return { L: rows[0][0], a: rows[1][0], b: rows[2][0] };
-  }
-
-  // 3) jedna liczba w linii, kolejność L, a, b
-  const single = [];
-  for (const line of lines) {
-    const toks = line.split(/\s+/);
-    if (toks.length !== 1) continue;
-    const v = normNumber(toks[0]);
-    if (v !== null) single.push(v);
-  }
-  if (single.length >= 3 && inRange('L', single[0]) && inRange('a', single[1]) && inRange('b', single[2])) {
-    return { L: single[0], a: single[1], b: single[2] };
-  }
-  return res;
-}
-// OCR-PARSER-END
-
-async function loadImage(file) {
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
-  await img.decode();
-  return img;
-}
-
-// Odczyt L, a, b ze zdjęcia do wskazanych pól
-async function ocrFile(file, statusId, ids) {
-  const st = $(statusId);
-  st.textContent = 'Rozpoznawanie tekstu… (pierwszy raz może chwilę potrwać)';
-  try {
-    const w = await getWorker();
-    const img = await loadImage(file);
-    const { data } = await w.recognize(prepareImage(img));
-    const vals = Object.values(parseLab(data.text));
-    vals.forEach((v, i) => { if (v !== null) $(ids[i]).value = v; });
-    compute();
-    st.textContent = vals.every(x => x !== null)
-      ? 'Odczytano. Sprawdź wartości i popraw, jeśli trzeba.'
-      : 'Nie wszystko odczytano. Uzupełnij ręcznie.';
-    console.log('OCR:', data.text);
-  } catch (err) {
-    st.textContent = 'Błąd OCR: ' + err.message;
-  }
-}
-
-// Zdjęcie próbki (pomiar)
-$('photo').onchange = async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  $('preview').src = URL.createObjectURL(file);
-  $('preview').hidden = false;
-  await ocrFile(file, 'status', ['mL', 'ma', 'mb']);
-};
-
-// Zdjęcie wzoru (dodawanie): wypełnia pola, zapis przyciskiem "Zapisz wzór"
-$('pphoto').onchange = async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  await ocrFile(file, 'pstatus', ['pL', 'pa', 'pb']);
+$('mToggle').onclick = () => {
+  $('mList').hidden = !$('mList').hidden;
+  updateMToggle();
 };
 
 // ---------- start ----------
