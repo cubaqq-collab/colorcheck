@@ -165,6 +165,9 @@ const fmt = (x, d = 2) => (x >= 0 ? '+' : '') + x.toFixed(d);
 
 const ADD = '__add__';
 const DE_LIMIT = 0.8;
+// Tolerancje dla odchyleń: wartość poza zakresem jest wyświetlana na czerwono
+const TOL = { L: 1.5, a: 0.5, b: 0.5 };
+const outOfTol = (axis, v) => Math.round(Math.abs(v) * 100) > Math.round(TOL[axis] * 100);
 
 // Wzory startowe z pliku targets_of_color.xlsm (39 pozycji, posortowane alfabetycznie).
 // Używane tylko, gdy w pamięci nie ma jeszcze zapisanej listy (klucz 'patterns2').
@@ -293,7 +296,7 @@ function updateTarget() {
 function compute() {
   const p = current(), m = measured();
   if (!p || !m) {
-    ['dL', 'da', 'db', 'e76', 'e00'].forEach(id => $(id).textContent = '–');
+    ['dL', 'da', 'db', 'e76', 'e00'].forEach(id => { $(id).textContent = '–'; $(id).classList.remove('bad-de'); });
     ['cL', 'ca', 'cb'].forEach(id => $(id).innerHTML = '');
     return;
   }
@@ -303,6 +306,9 @@ function compute() {
   $('dL').textContent = fmt(dL);
   $('da').textContent = fmt(da);
   $('db').textContent = fmt(db);
+  $('dL').classList.toggle('bad-de', outOfTol('L', dL));
+  $('da').classList.toggle('bad-de', outOfTol('a', da));
+  $('db').classList.toggle('bad-de', outOfTol('b', db));
   $('cL').innerHTML = dirChip('L', dL);
   $('ca').innerHTML = dirChip('a', da);
   $('cb').innerHTML = dirChip('b', db);
