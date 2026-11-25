@@ -39,6 +39,15 @@
   button.tall{height:96px;margin-top:10px;font-size:18px}
   .pat-row{display:flex;gap:8px;align-items:center}
   .pat-row select{flex:1;width:auto}
+  .patwrap{flex:1;position:relative;min-width:0}
+  .patbtn{display:flex;align-items:center;gap:10px;width:100%;margin:0;padding:10px;background:#222;color:#eee;border:1px solid #333;border-radius:6px;font-size:16px;text-align:left}
+  .patbtn .caret{margin-left:auto;color:#aaa;font-size:12px}
+  .patbtn .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .patmenu{position:absolute;left:0;right:0;top:100%;z-index:5;margin-top:4px;max-height:55vh;overflow:auto;background:#181818;border:1px solid #333;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  .patmenu[hidden]{display:none!important}
+  .pitem{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #222;cursor:pointer;font-size:15px}
+  .pitem:active{background:#222}
+  .psw{width:26px;height:26px;border-radius:6px;border:1px solid #444;flex:0 0 26px}
   button.trash{width:auto;margin:0;padding:6px;background:transparent;line-height:0;flex:0 0 auto}
   button.trash:active{opacity:.6}
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
@@ -54,6 +63,13 @@
   .g6.inp > div{padding:4px 2px;min-height:46px}
   .g6.inp .lbl{font-size:14px;padding:0}
   .g6.inp input{padding:8px 4px;font-size:16px;letter-spacing:0}
+  .dgrid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #333;border-radius:6px;overflow:hidden;margin-top:10px}
+  .dgrid > div{padding:8px 6px;text-align:center;border-right:1px solid #333;border-bottom:1px solid #333;font-size:14px;min-width:0}
+  .dgrid > div:nth-child(2n){border-right:0}
+  .dgrid .dh b{font-size:18px}
+  .dgrid .dl{color:#aaa;font-weight:600}
+  .dgrid .dt{color:#aaa;font-weight:600;font-size:13px}
+  .dgrid .dp{height:90px;border-bottom:0}
   .app-title{text-align:center;font-size:28px;letter-spacing:.08em;margin:8px 0 16px}
 </style>
 </head>
@@ -66,12 +82,15 @@
   <h3>STD</h3>
 
   <div class="pat-row">
-    <select id="pat"></select>
+    <select id="pat" hidden></select>
+    <div class="patwrap">
+      <button id="patBtn" class="patbtn" type="button"></button>
+      <div id="patMenu" class="patmenu" hidden></div>
+    </div>
     <button id="delPat" class="trash" aria-label="Usuń wybrany wzór" hidden>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>
     </button>
   </div>
-  <div class="swatch" id="patSw"></div>
   <input id="pname" placeholder="Nazwa nowego wzoru" hidden style="margin-top:8px">
 
   <div id="addBlock" hidden>
@@ -109,8 +128,15 @@
     <div class="lbl">≏</div><div id="ca"></div>
     <div class="lbl">≏</div><div id="cb"></div>
 
-    <div class="de"><div class="lbl">ΔE76</div><div id="e76">–</div></div>
-    <div class="de"><div class="lbl">ΔE2000</div><div id="e00">–</div></div>
+  </div>
+
+  <div class="dgrid">
+    <div class="dh"><span class="dl">ΔE76:</span> <span id="e76">–</span></div>
+    <div class="dh"><span class="dl">ΔE2000:</span> <span id="e00">–</span></div>
+    <div class="dt">TARGET:</div>
+    <div class="dt">SAMPLE:</div>
+    <div class="dp" id="prevT"></div>
+    <div class="dp" id="prevS"></div>
   </div>
 
   <button id="savePhoto" class="sec-btn save-btn" type="button">Zapisz pomiar</button>
@@ -125,7 +151,8 @@
   </div>
   <div class="small" style="margin-top:6px">
     Pasek ΔE: lewa połowa wzorzec, prawa połowa pomiar. Odchylenia = pomiar − wzorzec.
-    ΔE powyżej 0,8 wyświetlane na czerwono.
+    ΔE powyżej 0,8 wyświetlane na czerwono.<br>
+    Tolerancje: ΔL ±1,5, Δa ±0,5, Δb ±0,5. Wartości poza nimi wyświetlane na czerwono.
   </div>
 </div>
 <div id="multiBlock" hidden>
@@ -262,6 +289,29 @@ function save() {
   localStorage.setItem('currentId', currentId || '');
 }
 
+const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const swatchOf = p => `<span class="psw" style="background:${labToHex(p.L, p.a, p.b)}"></span>`;
+
+// Własne menu z miniaturami kolorów (natywna lista nie pokazuje kolorów na telefonie)
+function renderPatMenu() {
+  const opts = [...$('pat').options];
+  const val = $('pat').value;
+  $('patMenu').innerHTML = opts.map(o => {
+    const p = patterns.find(x => x.id === o.value);
+    return `<div class="pitem" data-v="${escHtml(o.value)}">${p ? swatchOf(p) : ''}<span>${escHtml(o.text)}</span></div>`;
+  }).join('');
+  const cur = opts.find(o => o.value === val);
+  const cp = patterns.find(x => x.id === val);
+  $('patBtn').innerHTML = `${cp ? swatchOf(cp) : ''}<span class="name">${escHtml(cur ? cur.text : '')}</span><span class="caret">▼</span>`;
+  $('patMenu').querySelectorAll('.pitem').forEach(el => el.onclick = () => {
+    $('pat').value = el.dataset.v;
+    $('patMenu').hidden = true;
+    $('pat').dispatchEvent(new Event('change'));
+  });
+}
+$('patBtn').onclick = () => { $('patMenu').hidden = !$('patMenu').hidden; };
+document.addEventListener('click', e => { if (!e.target.closest('.patwrap')) $('patMenu').hidden = true; });
+
 function renderPatterns() {
   if (!addMode && !multiMode && !current()) addMode = true;
 
@@ -272,12 +322,12 @@ function renderPatterns() {
 
   $('pat').value = addMode ? ADD : multiMode ? MULTI : (currentId || '');
   $('addBlock').hidden = !addMode;
-  $('patSw').hidden = addMode || multiMode;
   $('pname').hidden = !addMode;
   $('measBlock').hidden = addMode || multiMode;
   $('multiBlock').hidden = !multiMode;
   $('savePat').hidden = !addMode;
   $('delPat').hidden = addMode || multiMode || !current();
+  renderPatMenu();
   if (multiMode) { renderMultiList(); renderMultiResults(); }
   $('cnt').textContent = `Zapisanych wzorów: ${patterns.length}`;
   updateTarget();
@@ -287,7 +337,6 @@ function renderPatterns() {
 
 function updateTarget() {
   const p = current();
-  $('patSw').style.background = p ? labToHex(p.L, p.a, p.b) : '#222';
   $('tL').textContent = p ? p.L.toFixed(2) : '–';
   $('ta').textContent = p ? p.a.toFixed(2) : '–';
   $('tb').textContent = p ? p.b.toFixed(2) : '–';
@@ -298,6 +347,8 @@ function compute() {
   if (!p || !m) {
     ['dL', 'da', 'db', 'e76', 'e00'].forEach(id => { $(id).textContent = '–'; $(id).classList.remove('bad-de'); });
     ['cL', 'ca', 'cb'].forEach(id => $(id).innerHTML = '');
+    ['e76', 'e00'].forEach(id => $(id).innerHTML = '–');
+    ['prevT', 'prevS'].forEach(id => $(id).style.background = '');
     return;
   }
   const dL = m.L - p.L, da = m.a - p.a, db = m.b - p.b;
@@ -315,8 +366,10 @@ function compute() {
 
   const c76 = e76 > DE_LIMIT ? 'bad-de' : '';
   const c00 = e00 > DE_LIMIT ? 'bad-de' : '';
-  $('e76').innerHTML = `${pairChip(p, m)}<span class="${c76}">${e76.toFixed(2)}</span>`;
-  $('e00').innerHTML = `${pairChip(p, m)}<span class="${c00}"><b>${e00.toFixed(2)}</b></span>`;
+  $('e76').innerHTML = `<span class="${c76}">${e76.toFixed(2)}</span>`;
+  $('e00').innerHTML = `<span class="${c00}"><b>${e00.toFixed(2)}</b></span>`;
+  $('prevT').style.background = labToHex(p.L, p.a, p.b);
+  $('prevS').style.background = labToHex(m.L, m.a, m.b);
 }
 
 // ---------- zdarzenia listy ----------
