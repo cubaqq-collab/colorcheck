@@ -64,12 +64,15 @@
   .g6.inp .lbl{font-size:14px;padding:0}
   .g6.inp input{padding:8px 4px;font-size:16px;letter-spacing:0}
   .dgrid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #333;border-radius:6px;overflow:hidden;margin-top:10px}
-  .dgrid > div{padding:8px 6px;text-align:center;border-right:1px solid #333;border-bottom:1px solid #333;font-size:14px;min-width:0}
+  .dgrid > div{padding:8px 6px;text-align:center;border-right:1px solid #333;border-bottom:1px solid #333;font-size:14px;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
   .dgrid > div:nth-child(2n){border-right:0}
-  .dgrid .dh b{font-size:18px}
-  .dgrid .dl{color:#aaa;font-weight:600}
-  .dgrid .dt{color:#aaa;font-weight:600;font-size:13px}
-  .dgrid .dp{height:90px;border-bottom:0}
+  .dgrid .dl{color:#aaa;font-weight:600;font-size:14px}
+  .dgrid .dv{font-size:18px;font-weight:700}
+  .dgrid .dt{color:#aaa;font-weight:600;font-size:14px}
+  .dgrid .dp{height:90px;padding:0;border-bottom:0}
+  .mtbl{border:1px solid #333;border-radius:12px;overflow:hidden;margin-top:8px;background:#181818}
+  .mtbl > .g6{border:0;border-radius:0}
+  .mtbl > .g6:last-child > div{border-bottom:0}
   .app-title{text-align:center;font-size:28px;letter-spacing:.08em;margin:8px 0 16px}
 </style>
 </head>
@@ -114,6 +117,7 @@
 
   <div class="sec">Sample</div>
 
+  <div class="mtbl">
   <div class="g6 inp">
     <div class="lbl">L*</div><div><input id="mL" type="text" inputmode="decimal" placeholder="L*"></div>
     <div class="lbl">a*</div><div><input id="ma" type="text" inputmode="decimal" placeholder="a*"></div>
@@ -129,10 +133,11 @@
     <div class="lbl">≏</div><div id="cb"></div>
 
   </div>
+  </div>
 
   <div class="dgrid">
-    <div class="dh"><span class="dl">ΔE76:</span> <span id="e76">–</span></div>
-    <div class="dh"><span class="dl">ΔE2000:</span> <span id="e00">–</span></div>
+    <div class="dh"><span class="dl">ΔE76:</span><span class="dv" id="e76">–</span></div>
+    <div class="dh"><span class="dl">ΔE2000:</span><span class="dv" id="e00">–</span></div>
     <div class="dt">TARGET:</div>
     <div class="dt">SAMPLE:</div>
     <div class="dp" id="prevT"></div>
@@ -367,7 +372,7 @@ function compute() {
   const c76 = e76 > DE_LIMIT ? 'bad-de' : '';
   const c00 = e00 > DE_LIMIT ? 'bad-de' : '';
   $('e76').innerHTML = `<span class="${c76}">${e76.toFixed(2)}</span>`;
-  $('e00').innerHTML = `<span class="${c00}"><b>${e00.toFixed(2)}</b></span>`;
+  $('e00').innerHTML = `<span class="${c00}">${e00.toFixed(2)}</span>`;
   $('prevT').style.background = labToHex(p.L, p.a, p.b);
   $('prevS').style.background = labToHex(m.L, m.a, m.b);
 }
@@ -486,9 +491,13 @@ function renderMultiResults() {
         <div class="lbl">a*</div><div>${p.a.toFixed(2)}</div>
         <div class="lbl">b*</div><div>${p.b.toFixed(2)}</div>
       </div>
-      <div class="g6" style="margin-top:6px">
-        <div class="de"><div class="lbl">ΔE76</div><div class="${c76}">${pairChip(p, m)}${e76.toFixed(2)}</div></div>
-        <div class="de"><div class="lbl">ΔE2000</div><div class="${c00}">${pairChip(p, m)}<b>${e00.toFixed(2)}</b></div></div>
+      <div class="dgrid">
+        <div class="dh"><span class="dl">ΔE76:</span><span class="dv"><span class="${c76}">${e76.toFixed(2)}</span></span></div>
+        <div class="dh"><span class="dl">ΔE2000:</span><span class="dv"><span class="${c00}">${e00.toFixed(2)}</span></span></div>
+        <div class="dt">TARGET:</div>
+        <div class="dt">SAMPLE:</div>
+        <div class="dp" style="background:${labToHex(p.L, p.a, p.b)}"></div>
+        <div class="dp" style="background:${labToHex(m.L, m.a, m.b)}"></div>
       </div>
     </div>`;
   }).join('');
